@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ekim Prim Rehberi</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout: kurumsal rapor — üst bant, Excel yükleme şeridi, özet tablo, kademe tablosu, ekip tablosu, kurallar */
+:root{
+  color-scheme:light;
+  --bg:#f3f4f7; --paper:#ffffff; --ink:#1b2133; --muted:#5d6478; --line:#dde0e8; --line2:#eceef3;
+  --brand:#4a2c82; --brand-2:#6a46a8; --brand-soft:#f1ecf9; --navy:#1d2740;
+  --good:#17804f; --good-soft:#e5f4ec; --warn:#a15c00; --warn-soft:#fdf2df; --bad:#b42f2f; --bad-soft:#fbe8e8;
+  --f-body:"IBM Plex Sans","Segoe UI",Arial,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.band{background:var(--navy);color:#fff;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:18px}
+.band .in{max-width:1040px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.band h1{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.band .meta{font-size:12px;color:#c5cad8;letter-spacing:.06em;text-transform:uppercase}
+.band .src{font-size:13px;color:#dfe3ee}
+main{padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+section{display:flex;flex-direction:column;gap:10px}
+h2{margin:0;font-size:15px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em}
+.hint{color:var(--muted);font-size:13px;margin:0;max-width:75ch}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:6px}
+.num,td.n,th.n{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* yükleme şeridi */
+.upload{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-left:4px solid var(--brand)}
+.upload b{display:block;font-size:14px}
+.upload .st{font-size:13px;color:var(--muted)}
+.upload .st.ok{color:var(--good)} .upload .st.err{color:var(--bad)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:4px;padding:8px 14px;cursor:pointer;border:1px solid var(--brand);background:var(--brand);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.btn.sec{background:var(--paper);color:var(--brand)}
+.btn:hover{background:var(--brand-2);border-color:var(--brand-2);color:#fff}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brand-2);outline-offset:2px}
+#dosya{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop{outline:2px dashed var(--brand-2);outline-offset:-6px;background:var(--brand-soft)}
+
+/* seçim satırı */
+.controls{display:grid;grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:12px;padding:14px 16px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+select,input[type=number]{font:inherit;font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:100%;text-transform:none;letter-spacing:0}
+.chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink);font-size:13px;grid-column:1/-1}
+.chk input{width:16px;height:16px;accent-color:var(--brand)}
+
+/* KPI tablosu */
+.kpi{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.kpi div{padding:12px 14px;border-right:1px solid var(--line2);display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi div:last-child{border-right:none}
+.kpi span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.kpi b{font-family:var(--f-num);font-size:19px;font-weight:600;color:var(--navy)}
+.kpi div.hl{background:var(--brand-soft)} .kpi div.hl b{color:var(--brand)}
+.answer{padding:12px 16px;border-top:1px solid var(--line);font-size:14px}
+.answer b{color:var(--brand)}
+
+/* tablolar */
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--brand);color:#fff;font-weight:600;font-size:12px;text-align:left;padding:9px 12px;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+th.n,td.n{text-align:right}
+tbody tr:nth-child(even) td{background:#fafbfc}
+tbody tr:last-child td{border-bottom:none}
+tr.me td{background:var(--brand-soft)!important;font-weight:600}
+tr.click{cursor:pointer} tr.click:hover td{background:#f4f1fa}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:3px;font-family:var(--f-body)}
+.t-ok{background:var(--good-soft);color:var(--good)} .t-next{background:var(--brand);color:#fff}
+.t-hard{background:var(--bad-soft);color:var(--bad)} .t-mid{background:var(--warn-soft);color:var(--warn)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;align-items:start}
+.cap{font-size:12px;font-weight:700;color:var(--navy);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.hgo{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.mini{width:60px;height:6px;background:var(--line2);border-radius:3px;overflow:hidden;flex:none}
+.mini i{display:block;height:100%;background:var(--brand)}
+.neg{color:var(--bad)} .pos{color:var(--good)}
+
+/* günlük liste */
+.check td:first-child{width:36px}
+.check input{width:16px;height:16px;accent-color:var(--good)}
+.check tr.done td{color:var(--muted);text-decoration:line-through}
+.note{background:var(--warn-soft);border:1px solid #f1d9ad;border-radius:6px;padding:10px 14px;font-size:13px}
+.foot{font-size:12px;color:var(--muted)}
+@media (max-width:760px){.kpi{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi div:nth-child(3){border-right:none}.kpi div:nth-child(-n+3){border-bottom:1px solid var(--line2)}}
+@media (max-width:560px){.upload{grid-template-columns:minmax(0,1fr)}.controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.controls label:first-child{grid-column:1/-1}.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi div{border-right:none;border-bottom:1px solid var(--line2)}}
+</style>
+<style>body{margin:0}</style>
+</head>
+<body>
+
+<header class="band"><div class="in">
+  <div><div class="meta">ATOM · Saha Operasyonları</div><h1>Ekim Prim Rehberi</h1></div>
+  <div class="src" id="kaynak">Veri: 1–20 Ekim Karne</div>
+</div></header>
+
+<main><div class="wrap">
+
+  <!-- EXCEL YÜKLE -->
+  <div class="panel upload" id="dropzone">
+    <div><b>Güncel karneyi yükle</b><span class="st" id="durum">Karne Excel'ini (.xlsx) seç veya buraya sürükle. Tüm tablolar yeni verilere göre güncellenir.</span></div>
+    <div class="btns">
+      <label class="btn" for="dosya" style="text-transform:none;letter-spacing:0;font-size:13px">Excel yükle</label>
+      <input id="dosya" type="file" accept=".xlsx,.xls,.xlsm">
+      <button class="btn sec" id="ornek" type="button">Örnek veriye dön</button>
+    </div>
+  </div>
+
+  <!-- KİŞİ -->
+  <div class="panel controls">
+    <label for="kisi">Temsilci<select id="kisi"></select></label>
+    <label for="kalan">Kalan iş günü<input id="kalan" type="number" min="1" inputmode="numeric"></label>
+    <label for="gecen">Geçen iş günü<input id="gecen" type="number" min="1" inputmode="numeric"></label>
+    <label class="chk" for="kural"><input id="kural" type="checkbox">Slayttaki ÇKK kuralını uygula (0–5 ÇKK = %0). Kapalıyken karnedeki gibi en az ×0,50 kullanılır.</label>
+  </div>
+
+  <!-- ÖZET -->
+  <section>
+    <h2>Özet</h2>
+    <div class="panel">
+      <div class="kpi">
+        <div><span>Hedef puan</span><b id="k-hedef">–</b></div>
+        <div><span>Gerçekleşen</span><b id="k-puan">–</b></div>
+        <div><span>Günlük ort.</span><b id="k-ort">–</b></div>
+        <div><span>Ay sonu HGO</span><b id="k-hgo">–</b></div>
+        <div><span>Tahmini prim</span><b id="k-prim">–</b></div>
+        <div class="hl"><span id="k-gl-lbl">Günlük gereken</span><b id="k-gl">–</b></div>
+      </div>
+      <div class="answer" id="cevap"></div>
+    </div>
+  </section>
+
+  <!-- KADEME TABLOSU -->
+  <section>
+    <h2>Kademe planı</h2>
+    <p class="hint">Her prim kademesi için kalan günlerde gereken günlük puan ve senin ÇKK çarpanın ile kalite oranınla tahmini net prim.</p>
+    <div class="tbl"><table id="t-kademe">
+      <thead><tr><th>Kademe</th><th class="n">Toplam puan</th><th class="n">Kalan puan</th><th class="n">Günlük gereken</th><th class="n">Günlük 500 TL+ kart</th><th class="n">Brüt prim</th><th class="n">Net prim</th><th>Durum</th></tr></thead>
+      <tbody></tbody></table></div>
+  </section>
+
+  <!-- ÇARPAN ETKİSİ -->
+  <section>
+    <h2>Çarpan etkisi</h2>
+    <p class="hint" id="carpan-hint"></p>
+    <div class="tbl"><table id="t-carpan">
+      <thead><tr><th>Net ÇKK</th><th class="n">Çarpan</th><th class="n">Eksik ÇKK</th><th class="n">Net prim</th><th class="n">Fark</th></tr></thead>
+      <tbody></tbody></table></div>
+  </section>
+
+  <!-- EKİP -->
+  <section>
+    <h2>Ekip karnesi</h2>
+    <p class="hint">Ay sonu tahmini HGO'ya göre sıralı. Bir satıra tıklayınca o temsilcinin planı açılır.</p>
+    <div class="tbl"><table id="t-ekip">
+      <thead><tr><th>#</th><th>Temsilci</th><th class="n">Hedef</th><th class="n">Gerçekleşen</th><th class="n">Günlük ort.</th><th class="n">Ay sonu HGO</th><th class="n">Aktif ÇKK</th><th class="n">Kalite</th><th class="n">Tahmini prim</th><th class="n">Sonraki kademe için / gün</th></tr></thead>
+      <tbody></tbody></table></div>
+  </section>
+
+  <!-- GÜNLÜK -->
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2>Günlük kontrol listesi</h2><button class="btn sec" id="sifirla" type="button">Yeni gün</button></div>
+    <div class="tbl"><table class="check" id="t-check">
+      <thead><tr><th></th><th>Yapılacak</th><th>Neden</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <!-- REFERANS -->
+  <section>
+    <h2>Ekim prim tabloları</h2>
+    <div class="grid3">
+      <div><p class="cap">Prim kademeleri</p><div class="tbl"><table id="r-prim"><thead><tr><th>HGO</th><th class="n">Prim (TL)</th></tr></thead><tbody></tbody></table></div></div>
+      <div><p class="cap">ÇKK çarpanı</p><div class="tbl"><table id="r-ckk"><thead><tr><th>Net ÇKK</th><th class="n">Çarpan</th></tr></thead><tbody></tbody></table></div></div>
+      <div>
+        <p class="cap">Puanlama</p>
+        <div class="tbl"><table><thead><tr><th>İşlem</th><th class="n">Puan</th></tr></thead><tbody>
+          <tr><td>Black aktifleşme 250–500 TL</td><td class="n">1</td></tr>
+          <tr><td>Black aktifleşme 500 TL+</td><td class="n">2</td></tr>
+          <tr><td>Harika Kart 3.500 TL</td><td class="n">1</td></tr>
+          <tr><td>Harika Kart 7.000 TL+</td><td class="n">2</td></tr>
+        </tbody></table></div>
+        <p class="foot" style="margin:6px 0 0">Yeni Black, beyaz inaktif (Temmuz sonrası harcama) ve ÇKK'lı beyaz aktif müşteri için geçerli.</p>
+        <p class="cap" style="margin-top:14px">Kalite ödeme oranı</p>
+        <div class="tbl"><table id="r-kal"><thead><tr><th>Kalite notu</th><th class="n">Oran</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+    <p class="foot">Net prim = kademe primi × ÇKK çarpanı × kalite ödeme oranı. Kalite aralıkları karnedeki örneklerden çıkarıldı; resmi tabloda yer almıyor. Excel'de kalite ödeme oranı sütunu varsa doğrudan o kullanılır.</p>
+    <div class="note"><b>Netleştirilmesi gereken:</b> Ekim sunumunda 0–5 ÇKK için çarpan %0 görünüyor, karne ise herkese en az 0,50 uyguluyor. Ay sonunda hangisinin geçerli olacağını yöneticine sor.</div>
+  </section>
+
+  <section>
+    <h2>Kurallar</h2>
+    <div class="tbl"><table><thead><tr><th>Kural</th><th>Etkisi</th></tr></thead><tbody>
+      <tr><td><span class="tag t-hard">Kritik</span> Mağaza dışı çalışma, masa örtüsü</td><td>Tespit edilen işlemin 2 katı performans silinir</td></tr>
+      <tr><td><span class="tag t-mid">Devamlılık</span> Her iş günü en az 1 aktif kart</td><td>Ekim'de 21 yerine 20 günde aktiflik aranır</td></tr>
+      <tr><td><span class="tag t-mid">Devamlılık</span> Dönem kapanışında aktif olmayan kart</td><td>Devamlılık primine dahil edilmez</td></tr>
+      <tr><td><span class="tag t-mid">İptal</span> Ağustos ve Eylül iptalleri</td><td>Prim hesabından düşülür; Eylül iptalleri ÇKK çarpanına dahil edilmez</td></tr>
+      <tr><td><span class="tag t-ok">Bilgi</span> 1–15 Ekim toplamı 20.000 aktif kartın altındaysa</td><td>17, 24 ve 31 Ekim Cumartesi sahaya çıkılır</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <p class="foot">Tahmindir; resmi prim ay sonu karnesine göre ödenir. Yüklenen Excel yalnızca bu tarayıcıda işlenir ve saklanır, başka bir yere gönderilmez.</p>
+</div></main>
+
+<script>
+const PRIM=[[0,0],[60,5000],[70,10000],[80,15000],[90,18000],[100,21000],[110,35000],[120,40000],[140,55000],[160,70000],[180,80000],[200,100000]];
+const CKK=[[0,0],[6,.5],[10,1],[16,1.1],[24,1.2],[32,1.3],[40,1.5]];
+const KAL=[[100,1.15,"100"],[93,1,"93–99"],[81,.9,"81–92"],[70,.7,"70–80"],[0,0,"70 altı"]];
+// Örnek: 1–20 Ekim karnesi [ad, hedef, gerçekleşen, günlük ort, ay sonu tahmini, aktif ÇKK, kalite, ödeme oranı]
+const SAMPLE_RAW=[["Mustafa Emir Su",180,101,7.21,158.71,3,90,1],["Yiğit Aytulu",180,92,6.57,144.57,0,90,.9],["Furkan Çelikbaş",180,92,6.57,144.57,4,88,.9],["Serkan Kurucu",180,88,6.29,138.29,4,100,1.15],["Evren Yeşilırmak",180,76,5.43,119.43,2,85,.9],["Uğur Can Kaypak",210,78,5.57,122.57,3,82,.9],["Ali Erdem",190,52,4.73,105.89,2,100,1.15],["Mustafa Saraç",210,68,4.86,106.86,3,83,.9],["Fatih Hamarat",180,58,4.14,91.14,7,96,1],["Mehmet Palta",180,53,3.79,83.29,2,81,.9],["Barış Göl",190,42,3.82,85.53,0,100,1.15],["Emircan Çınar",180,50,3.57,78.57,1,94,1],["Selman Ağ",180,50,3.57,78.57,5,96,1],["Cevat Erkan",210,58,4.14,91.14,0,75,.7],["Durmuş Ali Oran",210,55,3.93,86.43,3,86,.9],["Büşra Güngör",210,53,3.79,83.29,3,93,1],["Özen Fırat Pehlivan",180,36,2.57,56.57,2,95,1],["Ali Yağcı",210,34,2.43,53.43,1,100,1.15],["Fatih Değirmenci",210,23,1.64,36.14,0,73,.7],["Bahadır Balcı",120,4,.5,16.4,0,0,0],["Yusuf Yürek",210,5,.36,7.86,0,100,1.15]];
+const SAMPLE={name:"1–20 Ekim Karne (örnek)",rows:SAMPLE_RAW.map(r=>({ad:r[0],hedef:r[1],puan:r[2],ort:r[3],tahmin:r[4],ckk:r[5],kalite:r[6],odeme:r[7]}))};
+
+const $=id=>document.getElementById(id);
+const tl=n=>Math.round(n).toLocaleString("tr-TR")+" ₺";
+const f1=n=>(Math.round(n*10)/10).toLocaleString("tr-TR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const fx=n=>"×"+n.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+const primFor=h=>{let p=0;for(const[k,v]of PRIM)if(h>=k-1e-9)p=v;return p};
+const ckkFor=(c,strict)=>{let m=0;for(const[k,v]of CKK)if(c>=k)m=v;return(!strict&&m<.5)?.5:m};
+const kalFor=q=>{for(const[k,v]of KAL)if(q>=k)return v;return 0};
+
+let DATA=store("prim-veri")||SAMPLE;
+
+/* ---------- Excel okuma ---------- */
+const norm=s=>String(s??"").toLocaleLowerCase("tr-TR").replace(/ı/g,"i").replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ö/g,"o").replace(/ç/g,"c").replace(/i̇/g,"i").replace(/[^a-z0-9+]/g,"");
+const COLS={
+  ad:h=>h==="atom"||h==="temsilci"||h==="adsoyad",
+  hedef:h=>h.includes("aylikhedefpuan")||(h.includes("hedefpuan")&&!h.includes("durum")),
+  puan:h=>h.includes("gerceklesmepuan")||h==="gerceklesme",
+  ort:h=>h.includes("gunlukpuanort"),
+  tahmin:h=>h.includes("aysonutahminipuan"),
+  ckk:h=>h.includes("mevcutaktifckk"),
+  kalite:h=>h.includes("kalitenotu"),
+  odeme:h=>h.includes("kaliteodemeorani"),
+  iptal:h=>h.includes("iptaladet")&&h.includes("mevcut")
+};
+function toNum(v){if(v==null||v==="")return null;if(typeof v==="number")return v;const s=String(v).replace("%","").replace(/\./g,"").replace(",",".").trim();const n=parseFloat(s);return isNaN(n)?null:(String(v).includes("%")?n/100:n)}
+function readSheet(ws){
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  for(let r=0;r<Math.min(rows.length,40);r++){
+    const hs=(rows[r]||[]).map(norm);
+    const adI=hs.findIndex(COLS.ad);if(adI<0)continue;
+    const map={ad:adI};
+    for(const k of Object.keys(COLS))if(k!=="ad"){const i=hs.findIndex(COLS[k]);if(i>=0)map[k]=i}
+    const out=[];
+    for(let j=r+1;j<rows.length;j++){
+      const row=rows[j]||[];const ad=row[adI];
+      if(!ad||typeof ad!=="string"||!ad.trim())continue;
+      const o={ad:ad.trim()};for(const k in map)if(k!=="ad")o[k]=toNum(row[map[k]]);
+      out.push(o);
+    }
+    return{map,rows:out,score:Object.keys(map).length};
+  }
+  return null;
+}
+function parseWorkbook(wb,fname){
+  let best=null;const all=[];
+  for(const n of wb.SheetNames){const s=readSheet(wb.Sheets[n]);if(s){all.push(s);if(s.map.hedef!=null&&s.map.puan!=null&&(!best||s.score>best.score))best=s}}
+  if(!best)throw new Error("Dosyada “ATOM”, “Aylık Hedef Puan” ve “Gerçekleşme Puan” başlıklı bir tablo bulunamadı.");
+  // diğer sayfalardan eksik sütunları isimle tamamla (ör. iptal sayfası)
+  for(const s of all){if(s===best)continue;for(const r of best.rows){const o=s.rows.find(x=>x.ad===r.ad);if(o)for(const k in o)if(r[k]==null&&o[k]!=null)r[k]=o[k]}}
+  const rows=best.rows.filter(r=>r.hedef>0).map(r=>{
+    if(r.odeme!=null&&r.odeme>3)r.odeme/=100;
+    return r});
+  if(!rows.length)throw new Error("Tablo bulundu ama temsilci satırı okunamadı.");
+  return{name:fname.replace(/\.(xlsx|xls|xlsm)$/i,""),rows,loaded:new Date().toISOString()};
+}
+function handleFile(f){
+  if(!f)return;const st=$("durum");st.className="st";st.textContent="Okunuyor…";
+  if(typeof XLSX==="undefined"){st.className="st err";st.textContent="Excel okuyucu yüklenemedi. Sayfayı yenileyip tekrar dene.";return}
+  const rd=new FileReader();
+  rd.onload=e=>{try{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+    DATA=parseWorkbook(wb,f.name);store("prim-veri",DATA);store("prim-gun",null);
+    st.className="st ok";st.textContent=`${f.name} yüklendi: ${DATA.rows.length} temsilci okundu.`;
+    init();
+  }catch(err){st.className="st err";st.textContent=err.message||"Dosya okunamadı."}};
+  rd.onerror=()=>{st.className="st err";st.textContent="Dosya okunamadı."};
+  rd.readAsArrayBuffer(f);
+}
+$("dosya").addEventListener("change",e=>{handleFile(e.target.files[0]);e.target.value=""});
+const dz=$("dropzone");
+["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add("drop")}));
+["dragleave","drop"].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove("drop")}));
+dz.addEventListener("drop",e=>handleFile(e.dataTransfer.files[0]));
+$("ornek").addEventListener("click",()=>{DATA=SAMPLE;store("prim-veri",null);store("prim-gun",null);$("durum").className="st";$("durum").textContent="Örnek veri (1–20 Ekim) gösteriliyor.";init()});
+
+/* ---------- hesap ---------- */
+function derive(r,G,K){
+  const ort=r.ort!=null&&r.ort>0?r.ort:(r.puan||0)/G;
+  const puan=r.puan||0, proj=puan+ort*K, hgo=proj/r.hedef*100;
+  const strict=$("kural").checked, cm=ckkFor(r.ckk||0,strict);
+  const km=r.odeme!=null?r.odeme:kalFor(r.kalite||0);
+  const next=PRIM.find(([k])=>k>0&&k>hgo+1e-9)||PRIM[PRIM.length-1];
+  const needNext=Math.max(0,r.hedef*next[0]/100-puan)/K;
+  return{ort,puan,proj,hgo,cm,km,carp:cm*km,prim:primFor(hgo)*cm*km,next,needNext};
+}
+function guessDays(){
+  // ilk temsilci satırından: geçen = puan/ort, toplam = tahmin/ort
+  const r=DATA.rows.find(x=>x.ort>0&&x.puan>0&&x.tahmin>0);
+  if(r){const g=Math.round(r.puan/r.ort),t=Math.round(r.tahmin/r.ort);if(g>0&&t>g)return[g,t-g]}
+  return[14,8];
+}
+function init(){
+  $("kaynak").textContent="Veri: "+DATA.name+(DATA.loaded?" · "+new Date(DATA.loaded).toLocaleDateString("tr-TR"):"");
+  const sel=$("kisi"),prev=store("prim-kisi");
+  sel.innerHTML=DATA.rows.map((r,i)=>`<option value="${i}">${r.ad}</option>`).join("");
+  let i=DATA.rows.findIndex(r=>r.ad===prev);if(i<0)i=DATA.rows.findIndex(r=>r.ad==="Uğur Can Kaypak");sel.value=Math.max(0,i);
+  const gd=store("prim-gun")||guessDays();$("gecen").value=gd[0];$("kalan").value=gd[1];
+  render();
+}
+function render(){
+  const G=Math.max(1,+$("gecen").value||1),K=Math.max(1,+$("kalan").value||1);
+  store("prim-gun",[G,K]);
+  const r=DATA.rows[+$("kisi").value];if(!r)return;store("prim-kisi",r.ad);
+  const d=derive(r,G,K);
+  $("k-hedef").textContent=r.hedef;$("k-puan").textContent=f1(d.puan).replace(",0","");
+  $("k-ort").textContent=f1(d.ort);$("k-hgo").textContent="%"+Math.round(d.hgo);
+  $("k-prim").textContent=tl(d.prim);
+  $("k-gl-lbl").textContent=`%${d.next[0]} için / gün`;$("k-gl").textContent=f1(d.needNext);
+  const gap=d.needNext-d.ort, gain=primFor(d.next[0])*d.carp;
+  $("cevap").innerHTML=`Bugünden itibaren günde <b>${f1(d.needNext)} puan</b> (≈ <b>${Math.ceil(d.needNext/2)}</b> adet 500 TL+ aktifleşme) yaparsan %${d.next[0]} kademesine ulaşırsın; tahmini net prim <b>${tl(gain)}</b>. ${gap>0?`Mevcut ortalamanın günde ${f1(gap)} puan üstüne çıkman gerekiyor.`:"Mevcut ortalaman bunu karşılıyor."}`;
+
+  // kademe tablosu
+  $("t-kademe").tBodies[0].innerHTML=PRIM.filter(([k])=>k>=60&&k<=160).map(([k,v])=>{
+    const tot=r.hedef*k/100, kal=Math.max(0,tot-d.puan), pd=kal/K, done=d.hgo>=k;
+    const tag=done?'<span class="tag t-ok">Bu hızla tamam</span>':k===d.next[0]?'<span class="tag t-next">Sıradaki hedef</span>':pd>d.ort*2?'<span class="tag t-hard">Zor</span>':'<span class="tag t-mid">Ulaşılabilir</span>';
+    return `<tr class="${k===d.next[0]?"me":""}"><td><b>%${k}</b></td><td class="n">${Math.round(tot)}</td><td class="n">${f1(kal)}</td><td class="n">${f1(pd)}</td><td class="n">${Math.ceil(pd/2)}</td><td class="n">${v.toLocaleString("tr-TR")}</td><td class="n">${tl(v*d.carp)}</td><td>${tag}</td></tr>`}).join("");
+
+  // çarpan etkisi
+  const base=primFor(Math.max(d.hgo,d.next[0])),lvl=Math.max(d.hgo,d.next[0])>=d.next[0]?d.next[0]:Math.round(d.hgo);
+  const strict=$("kural").checked,ck=r.ckk||0,curNet=base*d.cm*d.km;
+  $("carpan-hint").textContent=`%${d.next[0]} kademesine (${primFor(d.next[0]).toLocaleString("tr-TR")} TL) ulaştığında ÇKK sayına göre eline geçecek net prim. Şu an ${ck} aktif ÇKK, kalite ödeme oranı %${Math.round(d.km*100)}.`;
+  $("t-carpan").tBodies[0].innerHTML=CKK.map(([k,v],i)=>{
+    const m=(!strict&&v<.5)?.5:v, net=base*m*d.km, cur=ck>=k&&(!CKK[i+1]||ck<CKK[i+1][0]);
+    return `<tr class="${cur?"me":""}"><td>${k}${CKK[i+1]?"–"+(CKK[i+1][0]-1):"+"}${cur?' <span class="tag t-next">Şu an</span>':""}</td><td class="n">${fx(m)}</td><td class="n">${ck>=k?"–":k-ck}</td><td class="n">${tl(net)}</td><td class="n ${net-curNet>0?"pos":net-curNet<0?"neg":""}">${net-curNet===0?"–":(net-curNet>0?"+":"")+tl(net-curNet)}</td></tr>`}).join("");
+
+  // ekip
+  const team=DATA.rows.map((x,i)=>({x,i,d:derive(x,G,K)})).sort((a,b)=>b.d.hgo-a.d.hgo);
+  $("t-ekip").tBodies[0].innerHTML=team.map((t,n)=>`<tr class="click ${t.x===r?"me":""}" data-i="${t.i}"><td class="n">${n+1}</td><td>${t.x.ad}</td><td class="n">${t.x.hedef}</td><td class="n">${f1(t.d.puan)}</td><td class="n">${f1(t.d.ort)}</td><td class="n"><span class="hgo">%${Math.round(t.d.hgo)}<span class="mini"><i style="width:${Math.min(100,t.d.hgo)}%"></i></span></span></td><td class="n">${t.x.ckk??"–"}</td><td class="n">${t.x.kalite??"–"}</td><td class="n">${tl(t.d.prim)}</td><td class="n">${f1(t.d.needNext)} <span class="foot">→ %${t.d.next[0]}</span></td></tr>`).join("");
+
+  // referans vurgusu
+  const pk=PRIM.filter(([k])=>d.hgo>=k).pop()[0];
+  $("r-prim").tBodies[0].innerHTML=PRIM.map(([k,v])=>`<tr class="${k===pk?"me":""}"><td>%${k}</td><td class="n">${v.toLocaleString("tr-TR")}</td></tr>`).join("");
+  $("r-ckk").tBodies[0].innerHTML=CKK.map(([k,v],i)=>{const cur=ck>=k&&(!CKK[i+1]||ck<CKK[i+1][0]);return `<tr class="${cur?"me":""}"><td>${k}${CKK[i+1]?"–"+(CKK[i+1][0]-1):"+"}</td><td class="n">${fx(v)}</td></tr>`}).join("");
+  const q=r.kalite||0;$("r-kal").tBodies[0].innerHTML=KAL.map(([k,v,l])=>`<tr class="${KAL.find(([kk])=>q>=kk)[0]===k?"me":""}"><td>${l}</td><td class="n">%${Math.round(v*100)}</td></tr>`).join("");
+
+  renderCheck(d,ck);
+}
+function renderCheck(d,ck){
+  const nc=CKK.find(([k])=>k>ck);
+  const items=[
+    ["magaza","Yoğun ama az çalışılmış bir mağaza seç","Az kart satılmış, trafiği yüksek mağaza daha fazla fırsat"],
+    ["puan",`En az ${Math.ceil(d.needNext)} puan yap`,`%${d.next[0]} kademesi için günlük gereken`],
+    ["aktif","En az 1 kartı aktifleştir","Devamlılık primi şartı"],
+    ["500","Her müşteriye 500 TL+ harcama öner","Aynı müşteriden 2 kat puan"],
+    ["ckk",nc?`En az 1 ÇKK al (sıradaki eşik: ${nc[0]})`:"ÇKK sayını koru","Çarpan primin tamamını büyütür"],
+    ["kural","Yalnızca mağaza içinde, masa örtüsüz çalış","Kural dışı işlem 2 katı silinir"],
+    ["iptal","Önceki satışlarda iptal riskini kontrol et","İptaller puandan düşer"]
+  ];
+  const st=store("prim-check")||{};
+  $("t-check").tBodies[0].innerHTML=items.map(([k,t,w])=>`<tr class="${st[k]?"done":""}"><td><input type="checkbox" id="c-${k}" data-k="${k}" ${st[k]?"checked":""} aria-label="${t}"></td><td><label for="c-${k}" style="all:unset;cursor:pointer">${t}</label></td><td>${w}</td></tr>`).join("");
+}
+$("t-check").addEventListener("change",e=>{const st=store("prim-check")||{};st[e.target.dataset.k]=e.target.checked;store("prim-check",st);e.target.closest("tr").classList.toggle("done",e.target.checked)});
+$("sifirla").addEventListener("click",()=>{store("prim-check",{});render()});
+$("t-ekip").addEventListener("click",e=>{const tr=e.target.closest("tr[data-i]");if(tr){$("kisi").value=tr.dataset.i;render();window.scrollTo({top:0,behavior:"smooth"})}});
+["kisi","gecen","kalan","kural"].forEach(id=>$(id).addEventListener(id==="kisi"||id==="kural"?"change":"input",render));
+init();
+</script>
+
+</body>
+</html>
